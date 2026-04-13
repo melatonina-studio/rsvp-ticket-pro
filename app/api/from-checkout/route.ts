@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendTicketEmail } from "@/lib/email/send-ticket-email";
 
-function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 function makeCode() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase();
@@ -14,26 +13,12 @@ function makePassToken() {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const sessionId = req.nextUrl.searchParams.get("session_id");
 
-    const name = String(body?.name || "").trim();
-    const email = String(body?.email || "").trim().toLowerCase();
-    const phone = String(body?.phone || "").trim();
-    const website = String(body?.website || "").trim();
-    const eventSlug = String(body?.event_slug || "").trim();
-
-    if (website) {
-      return NextResponse.json({ ok: true });
-    }
-
-    if (name.length < 2) {
-      return NextResponse.json({ error: "Inserisci un nome valido." }, { status: 400 });
-    }
-
-    if (!isEmail(email)) {
-      return NextResponse.json({ error: "Inserisci un’email valida." }, { status: 400 });
+    if (!sessionId) {
+      return NextResponse.json({ error: "session_id mancante" }, { status: 400 });
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -47,6 +32,26 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== "paid") {
+      return NextResponse.json({ error: "Pagamento non completato." }, { status: 400 });
+    }
+
+    const email = String(session.customer_details?.email || session.metadata?.email || "")
+      .trim()
+      .toLowerCase();
+
+    const name = String(session.metadata?.name || session.customer_details?.name || "")
+      .trim();
+
+    const phone = String(session.metadata?.phone || "").trim();
+    const eventSlug = String(session.metadata?.event_slug || "").trim();
+
+    if (!email) {
+      return NextResponse.json({ error: "Email mancante nel checkout." }, { status: 400 });
+    }
 
     let eventQuery = supabase
       .from("events")
@@ -62,21 +67,19 @@ export async function POST(req: NextRequest) {
     const { data: event, error: eventError } = await eventQuery.single();
 
     if (eventError || !event) {
-      return NextResponse.json(
-        { error: "Nessun evento pubblicato trovato." },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Evento non trovato." }, { status: 404 });
     }
 
-    if (event.access_mode === "paid") {
+    if (event.access_mode !== "paid") {
       return NextResponse.json(
-        { error: "Questo evento richiede l'acquisto del ticket." },
+        { error: "Questo evento non è configurato come paid." },
         { status: 400 }
       );
     }
 
     let profileId = "";
     let passToken = "";
+    let profileName = name;
 
     const { data: existingProfile, error: profileFindError } = await supabase
       .from("profiles")
@@ -91,6 +94,7 @@ export async function POST(req: NextRequest) {
     if (existingProfile) {
       profileId = existingProfile.id;
       passToken = existingProfile.pass_token;
+      profileName = existingProfile.name || name;
 
       const nextName = existingProfile.name || name;
       const nextPhone = existingProfile.phone || phone || null;
@@ -119,11 +123,11 @@ export async function POST(req: NextRequest) {
         .from("profiles")
         .insert({
           email,
-          name,
+          name: name || null,
           phone: phone || null,
           pass_token: passToken,
         })
-        .select("id, pass_token")
+        .select("id, pass_token, name")
         .single();
 
       if (createProfileError || !newProfile) {
@@ -132,50 +136,45 @@ export async function POST(req: NextRequest) {
 
       profileId = newProfile.id;
       passToken = newProfile.pass_token;
+      profileName = newProfile.name || name;
     }
 
-    const { data: existingTicket, error: ticketFindError } = await supabase
+    const { data: existingTicket, error: existingTicketError } = await supabase
       .from("tickets")
-      .select("id, code, qr_value, status, payment_status, type")
+      .select("id, code, type, payment_status, status")
       .eq("profile_id", profileId)
       .eq("event_id", event.id)
-      .in("status", ["active", "used"])
-      .order("created_at", { ascending: false })
-      .limit(1)
+      .eq("stripe_session_id", session.id)
       .maybeSingle();
 
-    if (ticketFindError) {
-      return NextResponse.json({ error: "Errore lettura ticket." }, { status: 500 });
+    if (existingTicketError) {
+      return NextResponse.json({ error: "Errore lettura ticket esistente." }, { status: 500 });
     }
 
     if (existingTicket) {
       try {
         await sendTicketEmail({
           to: email,
-          profileName: name,
+          profileName,
           eventTitle: event.title,
           eventLocation: event.location,
           eventStartsAt: event.starts_at,
           ticketCode: existingTicket.code,
-          ticketType: existingTicket.type as "free" | "door" | "paid",
+          ticketType: "paid",
           passToken,
         });
       } catch (emailError) {
-        console.error("EMAIL RSVP EXISTING TICKET ERROR:", emailError);
+        console.error("EMAIL CHECKOUT EXISTING TICKET ERROR:", emailError);
       }
 
       return NextResponse.json({
         ok: true,
-        reused: true,
-        event,
         code: existingTicket.code,
         pass_token: passToken,
       });
     }
 
     const code = makeCode();
-    const ticketType = event.access_mode === "door" ? "door" : "free";
-    const paymentStatus = event.access_mode === "door" ? "pending" : "free";
 
     const { data: ticket, error: ticketCreateError } = await supabase
       .from("tickets")
@@ -184,41 +183,43 @@ export async function POST(req: NextRequest) {
         event_id: event.id,
         code,
         qr_value: code,
-        type: ticketType,
+        type: "paid",
         status: "active",
-        payment_status: paymentStatus,
+        payment_status: "paid",
+        stripe_session_id: session.id,
+        stripe_payment_intent_id:
+          typeof session.payment_intent === "string" ? session.payment_intent : null,
         issued_at: new Date().toISOString(),
       })
-      .select("id, code, qr_value, type")
+      .select("id, code")
       .single();
 
     if (ticketCreateError || !ticket) {
-      return NextResponse.json({ error: "Errore creazione ticket." }, { status: 500 });
+      return NextResponse.json({ error: "Errore creazione ticket paid." }, { status: 500 });
     }
 
     try {
       await sendTicketEmail({
         to: email,
-        profileName: name,
+        profileName,
         eventTitle: event.title,
         eventLocation: event.location,
         eventStartsAt: event.starts_at,
         ticketCode: ticket.code,
-        ticketType: ticket.type as "free" | "door" | "paid",
+        ticketType: "paid",
         passToken,
       });
     } catch (emailError) {
-      console.error("EMAIL RSVP ERROR:", emailError);
+      console.error("EMAIL CHECKOUT ERROR:", emailError);
     }
 
     return NextResponse.json({
       ok: true,
-      event,
       code: ticket.code,
       pass_token: passToken,
     });
   } catch (error) {
-    console.error("RSVP API ERROR:", error);
-    return NextResponse.json({ error: "Errore server RSVP." }, { status: 500 });
+    console.error("FROM CHECKOUT ERROR:", error);
+    return NextResponse.json({ error: "Errore conferma checkout." }, { status: 500 });
   }
 }

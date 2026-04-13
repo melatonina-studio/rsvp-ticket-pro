@@ -1,163 +1,238 @@
-"use client";
+import Link from "next/link";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import SiteHeader from "@/components/PublicHeader";
 
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import styles from "./page.module.css";
+type EventCard = {
+  id: string;
+  title: string;
+  slug: string;
+  location: string | null;
+  starts_at: string;
+  poster_url: string | null;
+  access_mode: string;
+};
 
-function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+function formatCardDate(value: string) {
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "numeric",
+    month: "short",
+  }).format(new Date(value));
 }
 
-export default function Home() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
+export default async function HomePage() {
+  const supabase = createSupabaseServerClient();
+  const nowIso = new Date().toISOString();
 
-  // errore generale (banner rosso)
-  const [error, setError] = useState<string | null>(null);
+  const { data: upcoming } = await supabase
+    .from("events")
+    .select("id, title, slug, location, starts_at, poster_url, access_mode")
+    .eq("status", "published")
+    .gte("starts_at", nowIso)
+    .order("starts_at", { ascending: true });
 
-  // errori campo-specifici (flag)
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [nameError, setNameError] = useState<string | null>(null);
+  const { data: past } = await supabase
+    .from("events")
+    .select("id, title, slug, location, starts_at, poster_url, access_mode")
+    .eq("status", "published")
+    .lt("starts_at", nowIso)
+    .order("starts_at", { ascending: false });
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  const upcomingEvents = (upcoming ?? []) as EventCard[];
+  const pastEvents = (past ?? []) as EventCard[];
+  
+  function eventModeLabel(mode: string) {
+  if (mode === "free") return "Gratuito";
+  if (mode === "paid") return "A pagamento";
+  if (mode === "door") return "All’ingresso";
+  return mode;
+}
 
-    // reset errori
-    setError(null);
-    setEmailError(null);
-    setNameError(null);
-
-    setLoading(true);
-
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-
-    const payload = {
-      name: String(fd.get("name") || "").trim(),
-      email: String(fd.get("email") || "").trim(),
-      website: String(fd.get("website") || "").trim(), // honeypot anti-bot
+function eventModeStyle(mode: string) {
+  if (mode === "free") {
+    return {
+      border: "1px solid rgba(125,211,252,0.35)",
+      background: "rgba(125,211,252,0.10)",
+      color: "#b9e6ff",
     };
-
-    // Validazione client
-    if (payload.name.length < 2) {
-      const msg = "Inserisci un nome valido.";
-      setNameError(msg);
-      setError(msg);
-      setLoading(false);
-      return;
-    }
-
-    if (!isEmail(payload.email)) {
-      const msg = "Inserisci un’email valida.";
-      setEmailError(msg);
-      setError(msg);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/rsvp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setError(data?.error || "Errore invio RSVP");
-        setLoading(false);
-        return;
-      }
-
-      router.push(`/join?t=${encodeURIComponent(data.code)}`);
-    } catch {
-      setError("Errore di rete. Riprova.");
-      setLoading(false);
-    }
   }
 
+  if (mode === "paid") {
+    return {
+      border: "1px solid rgba(252,211,77,0.35)",
+      background: "rgba(252,211,77,0.10)",
+      color: "#ffe59a",
+    };
+  }
+
+  return {
+    border: "1px solid rgba(196,181,253,0.35)",
+    background: "rgba(196,181,253,0.10)",
+    color: "#ddd2ff",
+  };
+}
   return (
-    <main className={styles.main}>
-      <video className={styles.video} autoPlay muted loop playsInline>
-        <source src="/bg.mp4" type="video/mp4" />
-      </video>
+    <>
+      <SiteHeader />
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#030303",
+          color: "#fff",
+        }}
+      >
 
-      <div className={styles.vignette} />
+      <section className="hero">
+        <video className="hero-video" autoPlay muted loop playsInline>
+          <source src="/bg.mp4" type="video/mp4" />
+        </video>
 
-      <div className={styles.logoWrap}>
-        <Image
-          src="/logo.png"
-          alt="Logo"
-          width={180}
-          height={60}
-          priority
-          className={styles.logo}
-        />
-      </div>
+        <div className="hero-overlay" />
 
-      <div className={styles.content}>
-        <div className={styles.card}>
-          <h1 className={styles.h1}>RSVP - Venerdì 27 Marzo</h1>
-          <p className={styles.sub}>
-            Registrati e avrai la riduzione sul Ticket. Inserisci nome e cognome, email per ricevere la conferma. Niente spam, solo Tekno.
+        <div className="hero-content">
+          <p className="hero-eyebrow">SIMBIOSI SONORE</p>
+
+          <h1 className="hero-title">
+            EVENTI, TICKET
+            <br />
+            E PASS DIGITALE
+          </h1>
+
+          <p className="hero-sub">
+            Entra nell’ecosistema Simbiosi. Scopri gli eventi in programma,
+            acquista il ticket o richiedi l’accesso, e conserva tutto nel tuo pass digitale.
           </p>
-
-          <form className={styles.form} onSubmit={onSubmit} noValidate>
-            {/* honeypot anti-bot (invisibile) */}
-            <input
-              name="website"
-              tabIndex={-1}
-              autoComplete="off"
-              className={styles.honeypot}
-            />
-
-            <label className={styles.label}>
-              <span className={styles.labelText}>Nome e Cognome</span>
-              <input
-                className={`${styles.input} ${nameError ? styles.inputInvalid : ""}`}
-                name="name"
-                required
-                placeholder="Nome e cognome"
-                autoComplete="name"
-                onChange={() => {
-                  if (nameError) setNameError(null);
-                  if (error) setError(null);
-                }}
-              />
-              {nameError && <div className={styles.fieldError}>{nameError}</div>}
-            </label>
-
-            <label className={styles.label}>
-              <span className={styles.labelText}>Email</span>
-              <input
-                className={`${styles.input} ${emailError ? styles.inputInvalid : ""}`}
-                name="email"
-                required
-                type="email"
-                placeholder="nome@email.com"
-                autoComplete="email"
-                onChange={() => {
-                  if (emailError) setEmailError(null);
-                  if (error) setError(null);
-                }}
-              />
-              {emailError && <div className={styles.fieldError}>{emailError}</div>}
-            </label>
-
-            {error && <div className={styles.error}>{error}</div>}
-
-            <button className={styles.btn} type="submit" disabled={loading}>
-              {loading ? "Invio..." : "Partecipa"}
-            </button>
-
-            <p className={styles.privacy}>
-              Inviando accetti che useremo i dati solo per la gestione dell’evento. Per richiedere la cancellazione dei dati scrivi a: simbiosievents@gmail.com
-            </p>
-          </form>
         </div>
+      </section>
+      <EventRail title="Eventi in programma" events={upcomingEvents} />
+      <EventRail title="Eventi passati" events={pastEvents} />
+      </main>
+    </>
+  );
+}
+
+function EventRail({ title, events }: { title: string; events: EventCard[] }) {
+  return (
+    <section style={{ padding: "28px 22px 8px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 14,
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: 28 }}>{title}</h2>
+        <span style={{ opacity: 0.5, fontSize: 13 }}>{events.length} eventi</span>
       </div>
-    </main>
+
+      {events.length ? (
+        <div
+          style={{
+            display: "grid",
+            gridAutoFlow: "column",
+            gridAutoColumns: "minmax(180px, 220px)",
+            gap: 16,
+            overflowX: "auto",
+            paddingBottom: 12,
+          }}
+        >
+          {events.map((event) => (
+            <Link
+              key={event.id}
+              href={`/eventi/${event.slug}`}
+              style={{
+                textDecoration: "none",
+                color: "#fff",
+                borderRadius: 22,
+                overflow: "hidden",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  aspectRatio: "3 / 4",
+                  backgroundImage: `url('${event.poster_url && event.poster_url.startsWith("/") ? event.poster_url : "/cover-planet.jpg"}')`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              />
+
+              <div style={{ padding: 14 }}>
+                <div
+                  style={{
+                    display: "inline-block",
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    border:
+                      event.access_mode === "free"
+                        ? "1px solid rgba(125,211,252,0.4)"
+                        : event.access_mode === "paid"
+                          ? "1px solid rgba(252,211,77,0.4)"
+                          : "1px solid rgba(196,181,253,0.4)",
+                    background:
+                      event.access_mode === "free"
+                        ? "rgba(125,211,252,0.08)"
+                        : event.access_mode === "paid"
+                          ? "rgba(252,211,77,0.08)"
+                          : "rgba(196,181,253,0.08)",
+                    color:
+                      event.access_mode === "free"
+                        ? "#7dd3fc"
+                        : event.access_mode === "paid"
+                          ? "#fcd34d"
+                          : "#c4b5fd",
+                    marginBottom: 10,
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    opacity: 0.95,
+                  }}
+                >
+                  {event.access_mode === "free"
+                    ? "Gratuito"
+                    : event.access_mode === "paid"
+                      ? "A pagamento"
+                      : "Paga all’ingresso"}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    lineHeight: 1.1,
+                    marginBottom: 6,
+                  }}
+                >
+                  {event.title}
+                </div>
+
+                <div style={{ opacity: 0.72, fontSize: 14 }}>
+                  {event.location?.split(",")[0] || "Location"}
+                </div>
+
+                <div style={{ opacity: 0.6, fontSize: 13, marginTop: 6 }}>
+                  {formatCardDate(event.starts_at)}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div
+          style={{
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 18,
+            padding: 18,
+            background: "rgba(255,255,255,0.03)",
+            opacity: 0.72,
+          }}
+        >
+          Nessun evento da mostrare.
+        </div>
+      )}
+    </section>
   );
 }

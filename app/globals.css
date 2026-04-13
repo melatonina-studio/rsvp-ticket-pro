@@ -24,3 +24,137 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+.hero {
+  position: relative;
+  width: 100%;
+  min-height: 76vh;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: #050505;
+}
+
+.hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.52;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(3, 3, 3, 0.08) 0%,
+      rgba(3, 3, 3, 0.16) 30%,
+      rgba(3, 3, 3, 0.42) 58%,
+      rgba(3, 3, 3, 0.82) 78%,
+      rgba(3, 3, 3, 0.98) 100%
+    ),
+    radial-gradient(
+      ellipse at center,
+      rgba(0, 0, 0, 0) 45%,
+      rgba(0, 0, 0, 0.18) 75%,
+      rgba(0, 0, 0, 0.35) 100%
+    );
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1100px;
+  padding: 0 24px 56px;
+}
+
+.hero-eyebrow {
+  margin: 0 0 14px;
+  font-size: 13px;
+  letter-spacing: 2px;
+  opacity: 0.65;
+}
+
+.hero-title {
+  margin: 0 0 18px;
+  font-size: clamp(46px, 7vw, 88px);
+  line-height: 0.92;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  max-width: 980px;
+}
+
+.hero-sub {
+  margin: 0;
+  max-width: 760px;
+  font-size: clamp(18px, 2vw, 28px);
+  line-height: 1.28;
+  opacity: 0.9;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    min-height: 64vh;
+  }
+
+  .hero-content {
+    padding: 0 18px 38px;
+  }
+
+  .hero-title {
+    font-size: clamp(34px, 9vw, 56px);
+    line-height: 0.96;
+  }
+
+  .hero-sub {
+    font-size: 18px;
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    min-height: 58vh;
+  }
+
+  .hero-eyebrow {
+    font-size: 11px;
+    margin-bottom: 10px;
+  }
+
+  .hero-title {
+    font-size: 34px;
+    line-height: 0.96;
+    margin-bottom: 14px;
+  }
+
+  .hero-sub {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+}
+
+.heroVideo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.formWrapper {
+  position: relative;
+  z-index: 2;
+}
