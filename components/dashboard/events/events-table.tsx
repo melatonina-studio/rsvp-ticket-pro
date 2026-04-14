@@ -140,6 +140,7 @@ function EventTableRow({ event }: { event: EventRow }) {
           <option value="draft">Draft</option>
           <option value="published">Published</option>
         </select>
+
       </div>
     </td>
 
@@ -161,6 +162,12 @@ function EventTableRow({ event }: { event: EventRow }) {
           <Link href={`/dashboard/events/${event.id}`} className="underline">
             Modifica
           </Link>
+                  <Link
+                href={`/dashboard/events/${event.id}/participants`}
+                className="underline text-sm"
+              >
+                Lista Partecipanti
+              </Link>
         </div>
       </td>
     </tr>
