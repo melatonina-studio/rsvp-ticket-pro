@@ -88,6 +88,12 @@ export default async function EventsDashboardPage({
         >
           Crea evento
         </Link>
+        <Link
+          href="/dashboard/participants"
+          className="rounded-lg border px-4 py-2"
+        >
+          Tutti i partecipanti
+        </Link>
       </div>
 
       <div className="space-y-3 rounded-xl border p-4">
