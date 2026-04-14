@@ -80,6 +80,7 @@ export async function createEventAction(formData: FormData) {
   const slug = getString(formData, "slug");
   const description = getNullableString(formData, "description");
   const location = getNullableString(formData, "location");
+  const location_maps_url = getNullableString(formData, "location_maps_url");
   const starts_at = getNullableString(formData, "starts_at");
   const ends_at = getNullableString(formData, "ends_at");
   const poster_url = getNullableString(formData, "poster_url");
@@ -103,6 +104,7 @@ export async function createEventAction(formData: FormData) {
       slug,
       description,
       location,
+      location_maps_url,
       starts_at,
       ends_at,
       poster_url,
@@ -128,6 +130,7 @@ export async function updateEventAction(id: string, formData: FormData) {
   const slug = getString(formData, "slug");
   const description = getNullableString(formData, "description");
   const location = getNullableString(formData, "location");
+  const location_maps_url = getNullableString(formData, "location_maps_url");;
   const starts_at = getNullableString(formData, "starts_at");
   const ends_at = getNullableString(formData, "ends_at");
   const poster_url = getNullableString(formData, "poster_url");
@@ -151,6 +154,7 @@ export async function updateEventAction(id: string, formData: FormData) {
       slug,
       description,
       location,
+      location_maps_url,
       starts_at,
       ends_at,
       poster_url,
