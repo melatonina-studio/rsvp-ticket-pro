@@ -116,7 +116,24 @@ export default async function ParticipantsDashboardPage({
 
     return matchesQuery && matchesEvent && matchesPayment && matchesEntry;
   });
+  function buildExportHref(params: {
+  q?: string;
+  event?: string;
+  payment?: string;
+  entry?: string;
+}) {
+  const qs = new URLSearchParams();
 
+  if (params.q) qs.set("q", params.q);
+  if (params.event && params.event !== "all") qs.set("event", params.event);
+  if (params.payment && params.payment !== "all") qs.set("payment", params.payment);
+  if (params.entry && params.entry !== "all") qs.set("entry", params.entry);
+
+  const query = qs.toString();
+  return query
+    ? `/dashboard/participants/export?${query}`
+    : "/dashboard/participants/export";
+}
   return (
     <main className="space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -127,9 +144,23 @@ export default async function ParticipantsDashboardPage({
           </p>
         </div>
 
-        <Link href="/dashboard/events" className="text-sm underline">
-          ← Torna agli eventi
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={buildExportHref({
+              q: queryText,
+              event: activeEvent,
+              payment: activePayment,
+              entry: activeEntry,
+            })}
+            className="rounded-lg border px-4 py-2 text-sm"
+          >
+            Export CSV
+          </Link>
+
+          <Link href="/dashboard/events" className="text-sm underline">
+            ← Torna agli eventi
+          </Link>
+        </div>
       </div>
 
       <form className="space-y-4 rounded-xl border p-4">
