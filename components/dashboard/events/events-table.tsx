@@ -29,6 +29,42 @@ function formatPrice(priceCents: number, accessMode: AccessMode) {
   if (accessMode === "free" || priceCents <= 0) return "Gratis";
   return `€ ${(priceCents / 100).toFixed(2)}`;
 }
+function modeBadge(accessMode: AccessMode) {
+  const classes =
+    accessMode === "free"
+      ? "bg-green-100 text-green-700"
+      : accessMode === "paid"
+      ? "bg-purple-100 text-purple-700"
+      : "bg-orange-100 text-orange-700";
+
+  const label =
+    accessMode === "free"
+      ? "Gratuito"
+      : accessMode === "paid"
+      ? "A pagamento"
+      : "Paga all’ingresso";
+
+  return (
+    <span className={`rounded-full px-2 py-1 text-xs font-medium ${classes}`}>
+      {label}
+    </span>
+  );
+}
+
+function statusBadge(status: EventStatus) {
+  const classes =
+    status === "published"
+      ? "bg-green-100 text-green-700"
+      : "bg-gray-200 text-gray-700";
+
+  const label = status === "published" ? "Pubblicato" : "Draft";
+
+  return (
+    <span className={`rounded-full px-2 py-1 text-xs font-medium ${classes}`}>
+      {label}
+    </span>
+  );
+}
 
 function EventTableRow({ event }: { event: EventRow }) {
   const router = useRouter();
@@ -65,6 +101,9 @@ function EventTableRow({ event }: { event: EventRow }) {
       <td className="p-3">{event.location ?? "—"}</td>
 
       <td className="p-3">
+      <div className="flex flex-col gap-2">
+        {modeBadge(row.access_mode)}
+
         <select
           value={row.access_mode}
           onChange={(e) =>
@@ -80,9 +119,13 @@ function EventTableRow({ event }: { event: EventRow }) {
           <option value="paid">A pagamento</option>
           <option value="door">Paga all’ingresso</option>
         </select>
-      </td>
+      </div>
+    </td>
 
       <td className="p-3">
+      <div className="flex flex-col gap-2">
+        {statusBadge(row.status)}
+
         <select
           value={row.status}
           onChange={(e) =>
@@ -97,7 +140,8 @@ function EventTableRow({ event }: { event: EventRow }) {
           <option value="draft">Draft</option>
           <option value="published">Published</option>
         </select>
-      </td>
+      </div>
+    </td>
 
       <td className="p-3">{formatPrice(event.price_cents, row.access_mode)}</td>
 
