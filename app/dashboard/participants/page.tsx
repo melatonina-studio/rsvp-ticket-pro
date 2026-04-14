@@ -145,18 +145,6 @@ export default async function ParticipantsDashboardPage({
         </div>
 
         <div className="flex items-center gap-3">
-          <Link
-            href={buildExportHref({
-              q: queryText,
-              event: activeEvent,
-              payment: activePayment,
-              entry: activeEntry,
-            })}
-            className="rounded-lg border px-4 py-2 text-sm"
-          >
-            Export CSV
-          </Link>
-
           <Link href="/dashboard/events" className="text-sm underline">
             ← Torna agli eventi
           </Link>
@@ -164,157 +152,94 @@ export default async function ParticipantsDashboardPage({
       </div>
 
       <form className="space-y-4 rounded-xl border p-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Cerca</label>
-          <input
-            type="text"
-            name="q"
-            defaultValue={queryText}
-            placeholder="Nome, email, telefono, codice ticket, evento..."
-            className="w-full rounded-lg border px-3 py-2"
-          />
-        </div>
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_180px_180px_auto_auto]">
+          <div>
+            <label className="mb-1 block text-sm font-medium">Cerca</label>
+            <input
+              type="text"
+              name="q"
+              defaultValue={queryText}
+              placeholder="Nome, email, telefono, codice ticket, evento..."
+              className="w-full rounded-lg border px-3 py-2"
+            />
+          </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium">Evento</label>
-          <div className="flex flex-wrap gap-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium">Evento</label>
+            <select
+              name="event"
+              defaultValue={activeEvent}
+              className="w-full rounded-lg border px-3 py-2"
+            >
+              <option value="all">Tutti gli eventi</option>
+              {(events ?? []).map((event: any) => (
+                <option key={event.id} value={event.id}>
+                  {event.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Pagamento</label>
+            <select
+              name="payment"
+              defaultValue={activePayment}
+              className="w-full rounded-lg border px-3 py-2"
+            >
+              <option value="all">Tutti</option>
+              <option value="paid">Pagati</option>
+              <option value="pending">Da pagare</option>
+              <option value="free">Gratuiti</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Ingresso</label>
+            <select
+              name="entry"
+              defaultValue={activeEntry}
+              className="w-full rounded-lg border px-3 py-2"
+            >
+              <option value="all">Tutti</option>
+              <option value="entered">Entrati</option>
+              <option value="not_entered">Non entrati</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-black px-4 py-2 text-white"
+            >
+              Cerca
+            </button>
+          </div>
+
+          <div className="flex items-end">
             <Link
-              href={buildHref({
+              href={buildExportHref({
                 q: queryText,
-                event: "all",
+                event: activeEvent,
                 payment: activePayment,
                 entry: activeEntry,
               })}
-              className={tabClass(activeEvent === "all")}
+              className="w-full rounded-lg border px-4 py-2 text-center text-sm"
             >
-              Tutti
-            </Link>
-
-            {(events ?? []).map((event: any) => (
-              <Link
-                key={event.id}
-                href={buildHref({
-                  q: queryText,
-                  event: event.id,
-                  payment: activePayment,
-                  entry: activeEntry,
-                })}
-                className={tabClass(activeEvent === event.id)}
-              >
-                {event.title}
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium">Pagamento</label>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={buildHref({
-                q: queryText,
-                event: activeEvent,
-                payment: "all",
-                entry: activeEntry,
-              })}
-              className={tabClass(activePayment === "all")}
-            >
-              Tutti
-            </Link>
-            <Link
-              href={buildHref({
-                q: queryText,
-                event: activeEvent,
-                payment: "paid",
-                entry: activeEntry,
-              })}
-              className={tabClass(activePayment === "paid")}
-            >
-              Pagati
-            </Link>
-            <Link
-              href={buildHref({
-                q: queryText,
-                event: activeEvent,
-                payment: "pending",
-                entry: activeEntry,
-              })}
-              className={tabClass(activePayment === "pending")}
-            >
-              Da pagare
-            </Link>
-            <Link
-              href={buildHref({
-                q: queryText,
-                event: activeEvent,
-                payment: "free",
-                entry: activeEntry,
-              })}
-              className={tabClass(activePayment === "free")}
-            >
-              Gratuiti
+              Export CSV
             </Link>
           </div>
         </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium">Ingresso</label>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={buildHref({
-                q: queryText,
-                event: activeEvent,
-                payment: activePayment,
-                entry: "all",
-              })}
-              className={tabClass(activeEntry === "all")}
-            >
-              Tutti
-            </Link>
-            <Link
-              href={buildHref({
-                q: queryText,
-                event: activeEvent,
-                payment: activePayment,
-                entry: "entered",
-              })}
-              className={tabClass(activeEntry === "entered")}
-            >
-              Entrati
-            </Link>
-            <Link
-              href={buildHref({
-                q: queryText,
-                event: activeEvent,
-                payment: activePayment,
-                entry: "not_entered",
-              })}
-              className={tabClass(activeEntry === "not_entered")}
-            >
-              Non entrati
-            </Link>
-          </div>
-        </div>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs text-neutral-500">
+            Partecipanti trovati: <strong>{filteredTickets.length}</strong>
+          </p>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            className="rounded-lg bg-black px-4 py-2 text-white"
-          >
-            Cerca
-          </button>
-
-          <Link
-            href="/dashboard/participants"
-            className="text-sm underline"
-          >
-            Reset
+          <Link href="/dashboard/participants" className="text-sm underline">
+            Reset filtri
           </Link>
         </div>
-
-        <p className="text-xs text-neutral-500">
-          Partecipanti trovati: <strong>{filteredTickets.length}</strong>
-        </p>
       </form>
 
       <div className="overflow-x-auto rounded-xl border">
