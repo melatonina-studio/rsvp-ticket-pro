@@ -37,16 +37,25 @@ export default async function EventParticipantsPage({ params }: Props) {
 
   return (
     <main className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Partecipanti evento</h1>
 
-        <Link
-          href="/dashboard/events"
-          className="text-sm underline"
-        >
-          ← Torna agli eventi
-        </Link>
-      </div>
+        <div className="flex items-center gap-3">
+            <Link
+            href={`/dashboard/events/${id}/participants/export`}
+            className="rounded-lg border px-4 py-2 text-sm"
+            >
+            Export CSV
+            </Link>
+
+            <Link
+            href="/dashboard/events"
+            className="text-sm underline"
+            >
+            ← Torna agli eventi
+            </Link>
+        </div>
+        </div>
 
       <div className="overflow-x-auto rounded-xl border">
         <table className="min-w-full text-sm">
