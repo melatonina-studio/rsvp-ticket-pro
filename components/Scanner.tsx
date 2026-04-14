@@ -34,22 +34,54 @@ export default function Scanner({ onResult, feedback }: Props) {
 
   async function refreshDevices() {
     setError("");
+
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
+      setDevices([]);
+      setDeviceId("");
+      setError(
+        "Fotocamera non disponibile in questo browser o in questo contesto. Su iPhone usa un URL https."
+      );
+      return;
+    }
+
     try {
-      await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
+
+      stream.getTracks().forEach((track) => track.stop());
 
       const all = await navigator.mediaDevices.enumerateDevices();
       const list = all.filter((d) => d.kind === "videoinput") as MediaDeviceInfo[];
+
       setDevices(list);
 
+      if (!list.length) {
+        setDeviceId("");
+        setError("Nessuna fotocamera trovata su questo dispositivo.");
+        return;
+      }
+
       const preferred =
-        list.find((d) => /back|rear|environment|posteriore|triple/i.test(d.label))?.deviceId ||
+        list.find((d) => /back|rear|environment|posteriore|triple/i.test(d.label))
+          ?.deviceId ||
         list[list.length - 1]?.deviceId ||
         list[0]?.deviceId ||
         "";
 
       setDeviceId((prev) => prev || preferred);
     } catch (e: any) {
-      setError(e?.message || "Permesso fotocamera negato o fotocamera non disponibile.");
+      setDevices([]);
+      setDeviceId("");
+      setError(
+        e?.message ||
+          "Permesso fotocamera negato o fotocamera non disponibile."
+      );
     }
   }
 
@@ -62,41 +94,42 @@ export default function Scanner({ onResult, feedback }: Props) {
   }
 
   async function start() {
-    setError("");
-    if (!videoRef.current) return;
+  setError("");
 
-    if (!deviceId) {
-      setError("Nessuna fotocamera selezionata.");
-      return;
-    }
+  if (!videoRef.current) return;
 
-    stop();
-    setRunning(true);
-
-    try {
-      const controls = await reader.decodeFromVideoDevice(
-        deviceId,
-        videoRef.current,
-        (res, err) => {
-          if (res) {
-            const text = (res.getText() || "").trim();
-            if (!text) return;
-
-            stop();
-            onResult?.(text);
-            return;
-          }
-
-          if (err && err instanceof NotFoundException) return;
-        }
-      );
-
-      controlsRef.current = controls as unknown as ZXingControls;
-    } catch (e: any) {
-      setError(e?.message || "Errore avvio scanner.");
-      setRunning(false);
-    }
+  if (!deviceId) {
+    setError("Nessuna fotocamera selezionata.");
+    return;
   }
+
+  stop();
+  setRunning(true);
+
+  try {
+    const controls = await reader.decodeFromVideoDevice(
+      deviceId,
+      videoRef.current,
+      (res, err) => {
+        if (res) {
+          const text = (res.getText() || "").trim();
+          if (!text) return;
+
+          stop();
+          onResult?.(text);
+          return;
+        }
+
+        if (err && err instanceof NotFoundException) return;
+      }
+    );
+
+    controlsRef.current = controls as unknown as ZXingControls;
+  } catch (e: any) {
+    setError(e?.message || "Errore avvio scanner.");
+    setRunning(false);
+  }
+}
 
   useEffect(() => {
     refreshDevices();

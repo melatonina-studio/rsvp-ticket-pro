@@ -1,33 +1,14 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-type ProfileJoin =
-  | {
-      name: string | null;
-      email: string | null;
-    }
-  | Array<{
-      name: string | null;
-      email: string | null;
-    }>
-  | null;
-
-type EventJoin =
-  | {
-      title: string | null;
-    }
-  | Array<{
-      title: string | null;
-    }>
-  | null;
-
 export async function GET() {
   try {
     const supabase = createSupabaseServerClient();
 
     const { data, error } = await supabase
       .from("tickets")
-      .select(`
+      .select(
+        `
         id,
         code,
         used_at,
@@ -39,7 +20,8 @@ export async function GET() {
         events (
           title
         )
-      `)
+      `
+      )
       .not("used_at", "is", null)
       .order("used_at", { ascending: false });
 
@@ -50,22 +32,14 @@ export async function GET() {
       );
     }
 
-    const entries = (data ?? []).map((item: any) => {
-      const profileJoin = item.profiles as ProfileJoin;
-      const eventJoin = item.events as EventJoin;
-
-      const profile = Array.isArray(profileJoin) ? profileJoin[0] : profileJoin;
-      const event = Array.isArray(eventJoin) ? eventJoin[0] : eventJoin;
-
-      return {
-        name: profile?.name ?? "",
-        email: profile?.email ?? "",
-        code: item.code ?? "",
-        eventTitle: event?.title ?? "",
-        paymentStatus: item.payment_status ?? "",
-        checkedInAt: item.used_at ?? "",
-      };
-    });
+    const entries = (data ?? []).map((item: any) => ({
+      name: item.profiles?.name ?? "",
+      email: item.profiles?.email ?? "",
+      code: item.code ?? "",
+      eventTitle: item.events?.title ?? "",
+      paymentStatus: item.payment_status ?? "",
+      checkedInAt: item.used_at ?? "",
+    }));
 
     return NextResponse.json({
       count: entries.length,

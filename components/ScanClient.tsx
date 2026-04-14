@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Scanner from "./Scanner";
 
@@ -25,7 +26,8 @@ export default function ScanClient() {
   const [listOpen, setListOpen] = useState(false);
   const [entries, setEntries] = useState<CheckedInEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(false);
-
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get("event");
   function resetToIdle() {
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     resetTimerRef.current = setTimeout(() => {
@@ -58,10 +60,10 @@ export default function ScanClient() {
 
     try {
       const r = await fetch("/api/checkin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, eventId }),
+  });
 
       const data = await r.json();
 
