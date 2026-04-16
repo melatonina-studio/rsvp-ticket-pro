@@ -8,29 +8,30 @@ export default function SuccessPageClient() {
   const params = useSearchParams();
   const [message, setMessage] = useState("Stiamo preparando il tuo ticket...");
   const [progress, setProgress] = useState(18);
-  const [ready, setReady] = useState(false);
-  
-  useEffect(() => {
-    if (!ready) return;
-    
 
+  useEffect(() => {
     const sessionId = params.get("session_id");
+
+    if (!sessionId) {
+      setMessage("Sessione mancante.");
+      return;
+    }
 
     const progressTimer = setInterval(() => {
       setProgress((prev) => (prev >= 92 ? prev : prev + 6));
-    }, 200);
+    }, 220);
 
     const run = async () => {
       try {
         const res = await fetch(
-          `/api/from-checkout?session_id=${encodeURIComponent(sessionId || "")}`
+          `/api/from-checkout?session_id=${encodeURIComponent(sessionId)}`
         );
 
         const text = await res.text();
 
         if (!res.ok) {
           clearInterval(progressTimer);
-          setMessage(`Errore API`);
+          setMessage(`Errore API: ${text}`);
           return;
         }
 
@@ -47,7 +48,7 @@ export default function SuccessPageClient() {
 
         setTimeout(() => {
           window.location.href = `/ticket/${data.code}`;
-        }, 600); // più smooth
+        }, 500);
       } catch {
         clearInterval(progressTimer);
         setMessage("Errore durante il reindirizzamento.");
@@ -57,11 +58,8 @@ export default function SuccessPageClient() {
     run();
 
     return () => clearInterval(progressTimer);
-  }, [ready, params]);
-  
-    if (!ready) {
-      return null;
-    }
+  }, [params]);
+
   return (
     <main
       style={{
