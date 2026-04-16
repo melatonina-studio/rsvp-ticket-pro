@@ -3,7 +3,7 @@ import SuccessPageClient from "@/components/SuccessPageClient";
 
 export default function SuccessPage() {
   return (
-    <Suspense fallback={<main style={{ padding: 24 }}>Caricamento...</main>}>
+    <Suspense fallback={null}>
       <SuccessPageClient />
     </Suspense>
   );
