@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     let eventQuery = supabase
       .from("events")
-      .select("id, title, slug, access_mode, price_cents, location, starts_at")
+      .select("id, title, slug, access_mode, price_cents, location, starts_at, organization_id")
       .eq("status", "published");
 
     if (eventSlug) {
@@ -65,6 +65,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Nessun evento pubblicato trovato." },
         { status: 404 }
+      );
+    }
+
+    if (!event.organization_id) {
+      return NextResponse.json(
+        { error: "Evento senza organization_id." },
+        { status: 500 }
       );
     }
 
@@ -182,6 +189,7 @@ export async function POST(req: NextRequest) {
       .insert({
         profile_id: profileId,
         event_id: event.id,
+        organization_id: event.organization_id,
         code,
         qr_value: code,
         type: ticketType,
