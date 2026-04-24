@@ -186,6 +186,7 @@ export async function GET(req: NextRequest) {
         type: "paid",
         status: "active",
         payment_status: "paid",
+        organization_id: session.metadata?.organization_id,
         stripe_session_id: session.id,
         stripe_payment_intent_id:
           typeof session.payment_intent === "string" ? session.payment_intent : null,

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     let eventQuery = supabase
       .from("events")
-      .select("id, title, slug, access_mode, price_cents")
+      .select("id, title, slug, access_mode, price_cents, organization_id")
       .eq("status", "published");
 
     if (eventSlug) {
@@ -58,11 +58,13 @@ export async function POST(req: NextRequest) {
         },
       ],
       metadata: {
-        name,
-        email,
-        phone,
-        event_slug: event.slug,
-      },
+      name,
+      email,
+      phone,
+      event_slug: event.slug,
+      event_id: event.id,
+      organization_id: event.organization_id,
+    },
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cancel`,
     });
