@@ -8,8 +8,10 @@ type Result =
   | { status: "idle" }
   | { status: "ok"; name: string; email: string }
   | { status: "already"; name: string; email: string; checkedInAt?: string }
+  | { status: "wrong_event"; code: string; eventTitle?: string }
   | { status: "not_found"; code: string }
   | { status: "error"; message: string };
+  
 
 type CheckedInEntry = {
   name: string;
@@ -17,7 +19,7 @@ type CheckedInEntry = {
   checkedInAt: string;
 };
 
-export default function ScanClient() {
+export default function ScanClient({ eventId }: { eventId: string }) {
   const [res, setRes] = useState<Result>({ status: "idle" });
   const busyRef = useRef(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -26,8 +28,7 @@ export default function ScanClient() {
   const [listOpen, setListOpen] = useState(false);
   const [entries, setEntries] = useState<CheckedInEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(false);
-  const searchParams = useSearchParams();
-  const eventId = searchParams.get("event");
+
   function resetToIdle() {
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     resetTimerRef.current = setTimeout(() => {
@@ -83,6 +84,13 @@ export default function ScanClient() {
           checkedInAt: data.checkedInAt,
         });
         navigator.vibrate?.([60, 40, 60]);
+        } else if (data.status === "wrong_event") {
+          setRes({
+            status: "wrong_event",
+            code,
+            eventTitle: data.eventTitle,
+          });
+          navigator.vibrate?.(180);
       } else if (data.status === "not_found") {
         setRes({ status: "not_found", code });
         navigator.vibrate?.(180);
@@ -100,35 +108,43 @@ export default function ScanClient() {
   }
 
   const feedback =
-    res.status === "ok"
-      ? {
-          type: "ok" as const,
-          title: "VALIDO",
-          subtitle: res.name || res.email || "Ingresso confermato",
-        }
-      : res.status === "already"
-      ? {
-          type: "already" as const,
-          title: "GIÀ ENTRATO",
-          subtitle: res.name || res.email || "QR già usato",
-        }
-      : res.status === "not_found"
-      ? {
-          type: "not_found" as const,
-          title: "NON TROVATO",
-          subtitle: res.code,
-        }
-      : res.status === "error"
-      ? {
-          type: "error" as const,
-          title: "ERRORE",
-          subtitle: res.message,
-        }
-      : {
-          type: "idle" as const,
-          title: "",
-          subtitle: "",
-        };
+  res.status === "ok"
+    ? {
+        type: "ok" as const,
+        title: "VALIDO",
+        subtitle: res.name || res.email || "Ingresso confermato",
+      }
+    : res.status === "already"
+    ? {
+        type: "already" as const,
+        title: "GIÀ ENTRATO",
+        subtitle: res.name || res.email || "QR già usato",
+      }
+    : res.status === "wrong_event"
+    ? {
+        type: "error" as const,
+        title: "EVENTO SBAGLIATO",
+        subtitle: res.eventTitle
+          ? `Ticket valido per: ${res.eventTitle}`
+          : "Questo ticket non appartiene a questo evento",
+      }
+    : res.status === "not_found"
+    ? {
+        type: "not_found" as const,
+        title: "NON TROVATO",
+        subtitle: res.code,
+      }
+    : res.status === "error"
+    ? {
+        type: "error" as const,
+        title: "ERRORE",
+        subtitle: res.message,
+      }
+    : {
+        type: "idle" as const,
+        title: "",
+        subtitle: "",
+      };
 
   return (
     <>
