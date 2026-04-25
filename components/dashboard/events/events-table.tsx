@@ -162,12 +162,16 @@ function EventTableRow({ event }: { event: EventRow }) {
           <Link href={`/dashboard/events/${event.id}`} className="underline">
             Modifica
           </Link>
-                  <Link
-                href={`/dashboard/events/${event.id}/participants`}
-                className="underline text-sm"
-              >
-                Lista Partecipanti
-              </Link>
+
+          <Link
+            href={`/scan?key=${encodeURIComponent(
+              process.env.NEXT_PUBLIC_SCAN_KEY || ""
+            )}&event=${event.id}`}
+            className="underline"
+            target="_blank"
+          >
+            Scanner
+          </Link>
         </div>
       </td>
     </tr>

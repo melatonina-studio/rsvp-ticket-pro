@@ -57,6 +57,17 @@ export async function POST(req: Request) {
       .eq("code", code.trim())
       .single();
 
+      if (!ticket) {
+        return NextResponse.json({ status: "not_found" });
+      }
+
+      if (ticket.event_id !== eventId) {
+        return NextResponse.json({
+          status: "wrong_event",
+          eventTitle: "Evento diverso",
+        });
+      }
+
     console.log("CHECKIN CODE:", code);
     console.log("CHECKIN EVENT ID:", eventId);
     console.log("CHECKIN TICKET:", ticket);
