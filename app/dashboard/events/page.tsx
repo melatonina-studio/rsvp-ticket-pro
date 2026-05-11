@@ -54,6 +54,12 @@ export default async function EventsDashboardPage({
   const activeStatus = params.status ?? "all";
   const activeTime = params.time ?? "all";
 
+  const { data: organization } = await supabase
+  .from("organization_settings")
+  .select("id, name, slug, logo_url, primary_color")
+  .eq("id", ACTIVE_ORG_ID)
+  .single();
+
   const { data: events, error } = await supabase
     .from("events")
     .select(
@@ -77,6 +83,15 @@ export default async function EventsDashboardPage({
 
   return (
     <main className="space-y-6 p-6">
+    <div className="mb-6 rounded-xl border p-4">
+      <div className="text-xs uppercase tracking-wide text-neutral-500">
+        Organizzazione attiva
+      </div>
+
+      <div className="mt-1 text-xl font-semibold">
+        {organization?.name ?? "Organizzazione non trovata"}
+      </div>
+    </div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard Eventi</h1>
