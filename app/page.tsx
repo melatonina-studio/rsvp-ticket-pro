@@ -10,6 +10,23 @@ type EventCard = {
   starts_at: string;
   poster_url: string | null;
   access_mode: string;
+  organization_id: string | null;
+  organization_settings:
+    | {
+        id: string;
+        name: string | null;
+        slug: string | null;
+        logo_url: string | null;
+        primary_color: string | null;
+      }
+    | {
+        id: string;
+        name: string | null;
+        slug: string | null;
+        logo_url: string | null;
+        primary_color: string | null;
+      }[]
+    | null;
 };
 
 function formatCardDate(value: string) {
@@ -24,19 +41,52 @@ export default async function HomePage() {
   const nowIso = new Date().toISOString();
 
   const { data: upcoming } = await supabase
-    .from("events")
-    .select("id, title, slug, location, starts_at, poster_url, access_mode")
-    .eq("status", "published")
-    .gte("starts_at", nowIso)
-    .order("starts_at", { ascending: true });
+  .from("events")
+  .select(`
+    id,
+    title,
+    slug,
+    location,
+    starts_at,
+    poster_url,
+    access_mode,
+    organization_id,
+    organization_settings (
+      id,
+      name,
+      slug,
+      logo_url,
+      primary_color
+    )
+  `)
+  
+  .eq("status", "published")
+  .gte("starts_at", nowIso)
+  .order("starts_at", { ascending: true });
 
   const { data: past } = await supabase
     .from("events")
-    .select("id, title, slug, location, starts_at, poster_url, access_mode")
+    .select(`
+      id,
+      title,
+      slug,
+      location,
+      starts_at,
+      poster_url,
+      access_mode,
+      organization_id,
+      organization_settings (
+        id,
+        name,
+        slug,
+        logo_url,
+        primary_color
+      )
+    `)
     .eq("status", "published")
     .lt("starts_at", nowIso)
     .order("starts_at", { ascending: false });
-
+    
   const upcomingEvents = (upcoming ?? []) as EventCard[];
   const pastEvents = (past ?? []) as EventCard[];
   
@@ -110,6 +160,14 @@ function eventModeStyle(mode: string) {
   );
 }
 
+function getOrganization(event: EventCard) {
+  if (Array.isArray(event.organization_settings)) {
+    return event.organization_settings[0] ?? null;
+  }
+
+  return event.organization_settings ?? null;
+}
+
 function EventRail({ title, events }: { title: string; events: EventCard[] }) {
   return (
     <section style={{ padding: "28px 22px 8px" }}>
@@ -123,7 +181,9 @@ function EventRail({ title, events }: { title: string; events: EventCard[] }) {
         }}
       >
         <h2 style={{ margin: 0, fontSize: 28 }}>{title}</h2>
-        <span style={{ opacity: 0.5, fontSize: 13 }}>{events.length} eventi</span>
+        <span style={{ opacity: 0.5, fontSize: 13 }}>
+          {events.length} eventi
+        </span>
       </div>
 
       {events.length ? (
@@ -137,88 +197,113 @@ function EventRail({ title, events }: { title: string; events: EventCard[] }) {
             paddingBottom: 12,
           }}
         >
-          {events.map((event) => (
-            <Link
-              key={event.id}
-              href={`/eventi/${event.slug}`}
-              style={{
-                textDecoration: "none",
-                color: "#fff",
-                borderRadius: 22,
-                overflow: "hidden",
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              <div
+          {events.map((event) => {
+            const organization = getOrganization(event);
+
+            return (
+              <Link
+                key={event.id}
+                href={`/eventi/${event.slug}`}
                 style={{
-                  position: "relative",
-                  width: "100%",
-                  aspectRatio: "3 / 4",
-                  backgroundImage: `url('${event.poster_url && event.poster_url.startsWith("/") ? event.poster_url : "/cover-planet.jpg"}')`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
+                  textDecoration: "none",
+                  color: "#fff",
+                  borderRadius: 22,
+                  overflow: "hidden",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.08)",
                 }}
-              />
-
-              <div style={{ padding: 14 }}>
+              >
                 <div
                   style={{
-                    display: "inline-block",
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    border:
-                      event.access_mode === "free"
-                        ? "1px solid rgba(125,211,252,0.4)"
-                        : event.access_mode === "paid"
-                          ? "1px solid rgba(252,211,77,0.4)"
-                          : "1px solid rgba(196,181,253,0.4)",
-                    background:
-                      event.access_mode === "free"
-                        ? "rgba(125,211,252,0.08)"
-                        : event.access_mode === "paid"
-                          ? "rgba(252,211,77,0.08)"
-                          : "rgba(196,181,253,0.08)",
-                    color:
-                      event.access_mode === "free"
-                        ? "#7dd3fc"
-                        : event.access_mode === "paid"
-                          ? "#fcd34d"
-                          : "#c4b5fd",
-                    marginBottom: 10,
-                    fontSize: 11,
-                    textTransform: "uppercase",
-                    opacity: 0.95,
+                    position: "relative",
+                    width: "100%",
+                    aspectRatio: "3 / 4",
+                    backgroundImage: `url('${
+                      event.poster_url && event.poster_url.startsWith("/")
+                        ? event.poster_url
+                        : "/cover-planet.jpg"
+                    }')`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
                   }}
-                >
-                  {event.access_mode === "free"
-                    ? "Gratuito"
-                    : event.access_mode === "paid"
-                      ? "A pagamento"
-                      : "Paga all’ingresso"}
-                </div>
+                />
 
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    lineHeight: 1.1,
-                    marginBottom: 6,
-                  }}
-                >
-                  {event.title}
-                </div>
+                <div style={{ padding: 14 }}>
+                  <div
+                    style={{
+                      opacity: 0.62,
+                      fontSize: 11,
+                      marginBottom: 6,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      color:
+                        organization?.primary_color ||
+                        "rgba(255,255,255,0.62)",
+                    }}
+                  >
+                    {organization?.name
+                      ? `by ${organization.name}`
+                      : "by organizzazione"}
+                  </div>
 
-                <div style={{ opacity: 0.72, fontSize: 14 }}>
-                  {event.location?.split(",")[0] || "Location"}
-                </div>
+                  <div
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      lineHeight: 1.1,
+                      marginBottom: 6,
+                    }}
+                  >
+                    {event.title}
+                  </div>
 
-                <div style={{ opacity: 0.6, fontSize: 13, marginTop: 6 }}>
-                  {formatCardDate(event.starts_at)}
+                  <div style={{ opacity: 0.72, fontSize: 14 }}>
+                    {event.location?.split(",")[0] || "Location"}
+                  </div>
+
+                  <div style={{ opacity: 0.6, fontSize: 13, marginTop: 6 }}>
+                    {formatCardDate(event.starts_at)}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "inline-block",
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      border:
+                        event.access_mode === "free"
+                          ? "1px solid rgba(125,211,252,0.4)"
+                          : event.access_mode === "paid"
+                            ? "1px solid rgba(252,211,77,0.4)"
+                            : "1px solid rgba(196,181,253,0.4)",
+                      background:
+                        event.access_mode === "free"
+                          ? "rgba(125,211,252,0.08)"
+                          : event.access_mode === "paid"
+                            ? "rgba(252,211,77,0.08)"
+                            : "rgba(196,181,253,0.08)",
+                      color:
+                        event.access_mode === "free"
+                          ? "#7dd3fc"
+                          : event.access_mode === "paid"
+                            ? "#fcd34d"
+                            : "#c4b5fd",
+                      marginTop: 12,
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      opacity: 0.95,
+                    }}
+                  >
+                    {event.access_mode === "free"
+                      ? "Gratuito"
+                      : event.access_mode === "paid"
+                        ? "A pagamento"
+                        : "Paga all’ingresso"}
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       ) : (
         <div
