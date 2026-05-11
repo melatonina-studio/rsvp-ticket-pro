@@ -63,7 +63,7 @@ export default async function EventsDashboardPage({
   const { data: events, error } = await supabase
     .from("events")
     .select(
-      "id,title,slug,location,starts_at,price_cents,capacity,status,access_mode"
+      "id,title,slug,location,starts_at,price_cents,capacity,status,access_mode,organization_id"
     )
     .eq("organization_id", ACTIVE_ORG_ID)
     .order("starts_at", { ascending: false });
@@ -100,18 +100,21 @@ export default async function EventsDashboardPage({
           </p>
         </div>
 
-        <Link
-          href="/dashboard/events/new"
-          className="rounded-lg bg-black px-4 py-2 text-white"
-        >
-          Crea evento
-        </Link>
-        <Link
-          href="/dashboard/participants"
-          className="rounded-lg border px-4 py-2"
-        >
-          Tutti i partecipanti
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/dashboard/events/new"
+            className="rounded-lg bg-black px-4 py-2 text-white"
+          >
+            Crea evento
+          </Link>
+
+          <Link
+            href="/dashboard/participants"
+            className="rounded-lg border px-4 py-2"
+          >
+            Tutti i partecipanti
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-3 rounded-xl border p-4">
