@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ACTIVE_ORG_ID } from "@/lib/org";
 
 export async function GET() {
   try {
@@ -22,6 +23,7 @@ export async function GET() {
         )
       `
       )
+      .eq("organization_id", ACTIVE_ORG_ID)
       .not("used_at", "is", null)
       .order("used_at", { ascending: false });
 

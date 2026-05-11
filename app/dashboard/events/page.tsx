@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import EventsTable from "@/components/dashboard/events/events-table";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ACTIVE_ORG_ID } from "@/lib/org";
 
 type SearchParams = Promise<{
   status?: string;
@@ -58,7 +59,9 @@ export default async function EventsDashboardPage({
     .select(
       "id,title,slug,location,starts_at,price_cents,capacity,status,access_mode"
     )
+    .eq("organization_id", ACTIVE_ORG_ID)
     .order("starts_at", { ascending: false });
+    
 
   if (error) {
     throw new Error(error.message);

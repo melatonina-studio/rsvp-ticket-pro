@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
-
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ACTIVE_ORG_ID } from "@/lib/org";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -28,6 +28,7 @@ export default async function EventParticipantsPage({ params }: Props) {
       )
     `
     )
+    .eq("organization_id", ACTIVE_ORG_ID)
     .eq("event_id", id)
     .order("created_at", { ascending: false });
 

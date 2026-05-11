@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ACTIVE_ORG_ID } from "@/lib/org";
 
 type ProfileJoin =
   | {
@@ -34,6 +35,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!eventId || typeof eventId !== "string") {
+      return NextResponse.json(
+        { status: "error", error: "Evento mancante o non valido" },
+        { status: 400 }
+      );
+    }
+
     const supabase = createSupabaseServerClient();
 
     const { data: ticket, error } = await supabase
@@ -45,6 +53,7 @@ export async function POST(req: Request) {
         used_at,
         event_id,
         profile_id,
+        organization_id,
         profiles (
           name,
           email
@@ -57,17 +66,6 @@ export async function POST(req: Request) {
       .eq("code", code.trim())
       .single();
 
-      if (!ticket) {
-        return NextResponse.json({ status: "not_found" });
-      }
-
-      if (ticket.event_id !== eventId) {
-        return NextResponse.json({
-          status: "wrong_event",
-          eventTitle: "Evento diverso",
-        });
-      }
-
     console.log("CHECKIN CODE:", code);
     console.log("CHECKIN EVENT ID:", eventId);
     console.log("CHECKIN TICKET:", ticket);
@@ -79,17 +77,24 @@ export async function POST(req: Request) {
       });
     }
 
-    if (eventId && ticket.event_id !== eventId) {
-      return NextResponse.json({
-        status: "not_found",
-      });
-    }
-
     const profileJoin = ticket.profiles as ProfileJoin;
     const eventJoin = ticket.events as EventJoin;
 
     const profile = Array.isArray(profileJoin) ? profileJoin[0] : profileJoin;
     const event = Array.isArray(eventJoin) ? eventJoin[0] : eventJoin;
+
+    if (ticket.organization_id !== ACTIVE_ORG_ID) {
+      return NextResponse.json({
+        status: "not_found",
+      });
+    }
+
+    if (ticket.event_id !== eventId) {
+      return NextResponse.json({
+        status: "wrong_event",
+        eventTitle: event?.title ?? "Evento diverso",
+      });
+    }
 
     if (ticket.used_at) {
       return NextResponse.json({

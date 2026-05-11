@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ACTIVE_ORG_ID } from "@/lib/org";
 
 type ProfileJoin =
   | {
@@ -40,8 +41,10 @@ export async function GET() {
           title
         )
       `)
+      .eq("organization_id", ACTIVE_ORG_ID)
       .not("used_at", "is", null)
       .order("used_at", { ascending: false });
+      
 
     if (error) {
       return NextResponse.json(

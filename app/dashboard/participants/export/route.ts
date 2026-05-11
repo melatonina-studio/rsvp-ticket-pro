@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ACTIVE_ORG_ID } from "@/lib/org";
 
 function escapeCsv(value: unknown) {
   const stringValue = String(value ?? "");
@@ -46,6 +47,7 @@ export async function GET(req: Request) {
       )
     `
     )
+    .eq("organization_id", ACTIVE_ORG_ID)
     .order("created_at", { ascending: false });
 
   if (error) {
