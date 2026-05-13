@@ -218,11 +218,7 @@ function EventRail({ title, events }: { title: string; events: EventCard[] }) {
                     position: "relative",
                     width: "100%",
                     aspectRatio: "3 / 4",
-                    backgroundImage: `url('${
-                      event.poster_url && event.poster_url.startsWith("/")
-                        ? event.poster_url
-                        : "/cover-planet.jpg"
-                    }')`,
+                    backgroundImage: `url('${event.poster_url || "/cover-planet.jpg"}')`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}
@@ -231,19 +227,28 @@ function EventRail({ title, events }: { title: string; events: EventCard[] }) {
                 <div style={{ padding: 14 }}>
                   <div
                     style={{
-                      opacity: 0.62,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      marginBottom: 8,
                       fontSize: 11,
-                      marginBottom: 6,
                       textTransform: "uppercase",
                       letterSpacing: "0.1em",
-                      color:
-                        organization?.primary_color ||
-                        "rgba(255,255,255,0.62)",
+                      color: organization?.primary_color || "rgba(255,255,255,0.68)",
                     }}
                   >
-                    {organization?.name
-                      ? `by ${organization.name}`
-                      : "by organizzazione"}
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: 999,
+                        background: organization?.primary_color || "rgba(255,255,255,0.5)",
+                        display: "inline-block",
+                      }}
+                    />
+                    <span>
+                      {organization?.name || "Organizzazione"}
+                    </span>
                   </div>
 
                   <div

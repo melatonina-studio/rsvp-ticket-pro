@@ -1,9 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { updateEventRow } from "@/app/dashboard/events/actions";
 
 type AccessMode = "free" | "paid" | "door";
 type EventStatus = "draft" | "published";
@@ -20,33 +17,52 @@ type EventRow = {
   access_mode: string;
 };
 
-type RowState = {
-  access_mode: AccessMode;
-  status: EventStatus;
-};
+function normalizeAccessMode(value: string): AccessMode {
+  if (value === "paid" || value === "door" || value === "free") return value;
+  return "free";
+}
+
+function normalizeStatus(value: string): EventStatus {
+  if (value === "published" || value === "draft") return value;
+  return "draft";
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "Data non impostata";
+
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
 
 function formatPrice(priceCents: number, accessMode: AccessMode) {
   if (accessMode === "free" || priceCents <= 0) return "Gratis";
   return `€ ${(priceCents / 100).toFixed(2)}`;
 }
+
+function modeLabel(accessMode: AccessMode) {
+  if (accessMode === "free") return "Gratuito";
+  if (accessMode === "paid") return "A pagamento";
+  return "Paga all’ingresso";
+}
+
 function modeBadge(accessMode: AccessMode) {
   const classes =
     accessMode === "free"
-      ? "bg-green-100 text-green-700"
+      ? "border-sky-400/30 bg-sky-400/10 text-sky-200"
       : accessMode === "paid"
-      ? "bg-purple-100 text-purple-700"
-      : "bg-orange-100 text-orange-700";
-
-  const label =
-    accessMode === "free"
-      ? "Gratuito"
-      : accessMode === "paid"
-      ? "A pagamento"
-      : "Paga all’ingresso";
+        ? "border-violet-400/30 bg-violet-400/10 text-violet-200"
+        : "border-amber-400/30 bg-amber-400/10 text-amber-200";
 
   return (
-    <span className={`rounded-full px-2 py-1 text-xs font-medium ${classes}`}>
-      {label}
+    <span
+      className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-medium ${classes}`}
+    >
+      {modeLabel(accessMode)}
     </span>
   );
 }
@@ -54,153 +70,192 @@ function modeBadge(accessMode: AccessMode) {
 function statusBadge(status: EventStatus) {
   const classes =
     status === "published"
-      ? "bg-green-100 text-green-700"
-      : "bg-gray-200 text-gray-700";
+      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+      : "border-neutral-500/30 bg-neutral-500/10 text-neutral-300";
 
   const label = status === "published" ? "Pubblicato" : "Draft";
 
   return (
-    <span className={`rounded-full px-2 py-1 text-xs font-medium ${classes}`}>
+    <span
+      className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-medium ${classes}`}
+    >
       {label}
     </span>
   );
 }
 
-function EventTableRow({ event }: { event: EventRow }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
-  const [row, setRow] = useState<RowState>({
-    access_mode: event.access_mode as AccessMode,
-    status: event.status as EventStatus,
-  });
-
-  async function handleSave() {
-    startTransition(async () => {
-      await updateEventRow(event.id, {
-        access_mode: row.access_mode,
-        status: row.status,
-        });
-      router.refresh();
-    });
-  }
+function EventActions({ event }: { event: EventRow }) {
+  const scannerHref = `/scan?key=${encodeURIComponent(
+    process.env.NEXT_PUBLIC_SCAN_KEY || ""
+  )}&event=${event.id}`;
 
   return (
-    <tr className="border-b align-top">
-      <td className="p-3">
-        <div className="font-medium">{event.title}</div>
-        <div className="text-xs text-neutral-500">{event.slug}</div>
+    <div className="flex flex-wrap gap-2">
+      <Link
+        href={`/eventi/${event.slug}`}
+        className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+        target="_blank"
+      >
+        Apri evento
+      </Link>
+
+      <Link
+        href={`/dashboard/events/${event.id}`}
+        className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+      >
+        Modifica
+      </Link>
+
+      <Link
+        href={scannerHref}
+        className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/20"
+        target="_blank"
+      >
+        Scanner
+      </Link>
+    </div>
+  );
+}
+
+function EventTableRow({ event }: { event: EventRow }) {
+  const accessMode = normalizeAccessMode(event.access_mode);
+  const status = normalizeStatus(event.status);
+
+  return (
+    <tr className="border-b border-white/10 align-top transition hover:bg-white/[0.03]">
+      <td className="px-4 py-4">
+        <div className="font-semibold text-white">{event.title}</div>
+        <div className="mt-1 text-xs text-neutral-500">{event.slug}</div>
       </td>
 
-      <td className="p-3">
-        {event.starts_at
-          ? new Date(event.starts_at).toLocaleString("it-IT")
-          : "—"}
+      <td className="px-4 py-4 text-neutral-300">
+        {formatDate(event.starts_at)}
       </td>
 
-      <td className="p-3">{event.location ?? "—"}</td>
+      <td className="px-4 py-4 text-neutral-300">
+        {event.location ?? "Location non impostata"}
+      </td>
 
-      <td className="p-3">
-      <div className="flex flex-col gap-2">
-        {modeBadge(row.access_mode)}
+      <td className="px-4 py-4">{modeBadge(accessMode)}</td>
 
-        <select
-          value={row.access_mode}
-          onChange={(e) =>
-            setRow((prev) => ({
-              ...prev,
-              access_mode: e.target.value as AccessMode,
-            }))
-          }
-          className="rounded border px-2 py-1 bg-black text-white"
-          disabled={isPending}
-        >
-          <option value="free">Gratuito</option>
-          <option value="paid">A pagamento</option>
-          <option value="door">Paga all’ingresso</option>
-        </select>
-      </div>
-    </td>
+      <td className="px-4 py-4">{statusBadge(status)}</td>
 
-      <td className="p-3">
-      <div className="flex flex-col gap-2">
-        {statusBadge(row.status)}
+      <td className="px-4 py-4 font-medium text-white">
+        {formatPrice(event.price_cents, accessMode)}
+      </td>
 
-        <select
-          value={row.status}
-          onChange={(e) =>
-            setRow((prev) => ({
-              ...prev,
-              status: e.target.value as EventStatus,
-            }))
-          }
-          className="rounded border px-2 py-1 bg-black text-white"
-          disabled={isPending}
-        >
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-        </select>
+      <td className="px-4 py-4 text-neutral-300">{event.capacity ?? "—"}</td>
 
-      </div>
-    </td>
-
-      <td className="p-3">{formatPrice(event.price_cents, row.access_mode)}</td>
-
-      <td className="p-3">{event.capacity ?? "—"}</td>
-
-      <td className="p-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleSave}
-            className="rounded border px-2 py-1"
-            disabled={isPending}
-          >
-            {isPending ? "..." : "Salva"}
-          </button>
-
-          <Link href={`/dashboard/events/${event.id}`} className="underline">
-            Modifica
-          </Link>
-
-          <Link
-            href={`/scan?key=${encodeURIComponent(
-              process.env.NEXT_PUBLIC_SCAN_KEY || ""
-            )}&event=${event.id}`}
-            className="underline"
-            target="_blank"
-          >
-            Scanner
-          </Link>
-        </div>
+      <td className="min-w-[260px] px-4 py-4">
+        <EventActions event={event} />
       </td>
     </tr>
   );
 }
 
-export default function EventsTable({ events }: { events: EventRow[] }) {
-  return (
-    <div className="overflow-x-auto rounded-xl border">
-      <table className="min-w-full text-sm">
-        <thead className="border-b bg-neutral-50">
-          <tr>
-            <th className="p-3 text-left">Titolo</th>
-            <th className="p-3 text-left">Data</th>
-            <th className="p-3 text-left">Location</th>
-            <th className="p-3 text-left">Modalità</th>
-            <th className="p-3 text-left">Stato</th>
-            <th className="p-3 text-left">Prezzo</th>
-            <th className="p-3 text-left">Capienza</th>
-            <th className="p-3 text-left">Azioni</th>
-          </tr>
-        </thead>
+function EventMobileCard({ event }: { event: EventRow }) {
+  const accessMode = normalizeAccessMode(event.access_mode);
+  const status = normalizeStatus(event.status);
 
-        <tbody>
-          {events.map((event) => (
-            <EventTableRow key={event.id} event={event} />
-          ))}
-        </tbody>
-      </table>
+  return (
+    <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-white">{event.title}</h3>
+          <div className="mt-1 text-xs text-neutral-500">{event.slug}</div>
+        </div>
+
+        {statusBadge(status)}
+      </div>
+
+      <div className="mt-4 grid gap-2 text-sm text-neutral-300">
+        <div>
+          <span className="text-neutral-500">Data: </span>
+          {formatDate(event.starts_at)}
+        </div>
+
+        <div>
+          <span className="text-neutral-500">Location: </span>
+          {event.location ?? "Location non impostata"}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {modeBadge(accessMode)}
+
+          <span className="font-medium text-white">
+            {formatPrice(event.price_cents, accessMode)}
+          </span>
+
+          <span className="text-neutral-500">
+            Capienza: {event.capacity ?? "—"}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <EventActions event={event} />
+      </div>
+    </article>
+  );
+}
+
+export default function EventsTable({ events }: { events: EventRow[] }) {
+  if (!events.length) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-neutral-400">
+        Nessun evento trovato.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:hidden">
+        {events.map((event) => (
+          <EventMobileCard key={event.id} event={event} />
+        ))}
+      </div>
+
+      <div className="hidden overflow-hidden rounded-2xl border border-white/10 bg-black lg:block">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="border-b border-white/10 bg-white/[0.04]">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Evento
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Data
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Location
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Modalità
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Stato
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Prezzo
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Capienza
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Azioni
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {events.map((event) => (
+                <EventTableRow key={event.id} event={event} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
