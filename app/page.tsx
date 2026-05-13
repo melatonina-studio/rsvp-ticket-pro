@@ -139,22 +139,22 @@ function eventModeStyle(mode: string) {
         <div className="hero-overlay" />
 
         <div className="hero-content">
-          <p className="hero-eyebrow">SIMBIOSI SONORE</p>
+          <p className="hero-eyebrow">UNDERGROUND EVENTS</p>
 
           <h1 className="hero-title">
-            EVENTI, TICKET
+            TEKNO LOCATION
             <br />
-            E PASS DIGITALE
+            CREW, TICKET E LISTE
           </h1>
 
           <p className="hero-sub">
-            Entra nell’ecosistema Simbiosi. Scopri gli eventi in programma,
-            acquista il ticket o richiedi l’accesso, e conserva tutto nel tuo pass digitale.
+           Una piattaforma dedicata alla scena indipendente, elettronica e tekno.
+            Scopri gli eventi selezionati, entra in lista o accedi al tuo ticket digitale.
           </p>
         </div>
       </section>
-      <EventRail title="Eventi in programma" events={upcomingEvents} />
-      <EventRail title="Eventi passati" events={pastEvents} />
+      <EventRail title="Prossimi eventi" events={upcomingEvents} />
+      <EventRail title="Archivio eventi" events={pastEvents} />
       </main>
     </>
   );

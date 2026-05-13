@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
 
 const navItems = [
@@ -36,23 +35,19 @@ export default function SiteHeader() {
             boxSizing: "border-box",
         }}
         >
-        <Link
-          href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            textDecoration: "none",
-          }}
-        >
-          <Image
-            src="/logo.png"
-            alt="Simbiosi"
-            width={150}
-            height={46}
-            priority
-          />
-        </Link>
 
+          <Link
+            href="/"
+            style={{
+              color: "#fff",
+              textDecoration: "none",
+              fontWeight: 800,
+              letterSpacing: "0.12em",
+              fontSize: 18,
+            }}
+          >
+            SOTTOSUOLO
+          </Link>
         <nav className="site-nav-desktop">
           {navItems.map((item) => (
             <Link
