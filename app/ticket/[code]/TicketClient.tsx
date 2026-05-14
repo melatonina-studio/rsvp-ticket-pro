@@ -239,6 +239,7 @@ const ticketLabel =
               alt={event.title || "Locandina evento"}
               fill
               priority
+              unoptimized
               className={styles.poster}
             />
           </div>
