@@ -163,8 +163,9 @@ export default async function EventPage({ params }: EventPageProps) {
               </div>
 
               {organization?.name ? (
-                <div
-                  className="mt-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]"
+                <Link
+                  href={`/org/${organization.slug}`}
+                  className="mt-6 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] transition hover:opacity-70"
                   style={{
                     color: organization.primary_color || "rgba(255,255,255,0.62)",
                   }}
@@ -177,7 +178,7 @@ export default async function EventPage({ params }: EventPageProps) {
                     }}
                   />
                   {organization.name}
-                </div>
+                </Link>
               ) : null}
 
               <h1 className="mt-4 max-w-4xl text-5xl font-black leading-[0.92] tracking-tight md:text-7xl xl:text-8xl">
