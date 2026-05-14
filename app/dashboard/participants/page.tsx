@@ -490,7 +490,7 @@ export default async function ParticipantsDashboardPage({
             Eventi
           </Link>
 
-          <Link
+          <a
             href={buildExportHref({
               q: queryText,
               event: activeEvent,
@@ -500,7 +500,7 @@ export default async function ParticipantsDashboardPage({
             className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200"
           >
             Export CSV
-          </Link>
+          </a>
         </div>
       </div>
 

@@ -359,12 +359,12 @@ export default async function EventParticipantsPage({ params }: Props) {
             Scanner
           </Link>
 
-          <Link
+          <a
             href={`/dashboard/events/${id}/participants/export`}
             className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200"
           >
             Export CSV
-          </Link>
+          </a>
         </div>
       </div>
 
