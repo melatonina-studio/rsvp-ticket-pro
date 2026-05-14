@@ -92,20 +92,24 @@ function EventActions({ event }: { event: EventRow }) {
   return (
     <div className="flex flex-wrap gap-2">
       <Link
+        href={`/dashboard/events/${event.id}`}
+        className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+      >
+        Modifica
+      </Link>
+      <Link
+        href={`/dashboard/events/${event.id}/participants`}
+        className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+      >
+        Lista
+      </Link>
+      <Link
         href={`/eventi/${event.slug}`}
         className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
         target="_blank"
       >
         Apri evento
       </Link>
-
-      <Link
-        href={`/dashboard/events/${event.id}`}
-        className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-      >
-        Modifica
-      </Link>
-
       <Link
         href={scannerHref}
         className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/20"
