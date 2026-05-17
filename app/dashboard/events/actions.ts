@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getActiveOrganization } from "@/lib/auth/get-active-organization";
 
 type AccessMode = "free" | "paid" | "door";
 type EventStatus = "draft" | "published";
@@ -74,6 +75,7 @@ function normalizeCapacity(rawValue: FormDataEntryValue | null) {
 }
 
 export async function createEventAction(formData: FormData) {
+  const { organization } = await getActiveOrganization();
   const supabase = createSupabaseServerClient();
 
   const title = getString(formData, "title");
@@ -81,8 +83,8 @@ export async function createEventAction(formData: FormData) {
   const description = getNullableString(formData, "description");
   const location = getNullableString(formData, "location");
   const location_maps_url = getNullableString(formData, "location_maps_url");
-  const starts_at = getNullableString(formData, "starts_at");
-  const ends_at = getNullableString(formData, "ends_at");
+  const startsAtRaw = String(formData.get("starts_at") || "").trim();
+  const endsAtRaw = String(formData.get("ends_at") || "").trim();
   const poster_url = getNullableString(formData, "poster_url");
   const lineup_text = getNullableString(formData, "lineup_text");
   const playlist_1_url = getNullableString(formData, "playlist_1_url");
@@ -91,6 +93,9 @@ export async function createEventAction(formData: FormData) {
   const access_mode = getString(formData, "access_mode") as AccessMode;
   const status = getString(formData, "status") as EventStatus;
 
+  if (!startsAtRaw) {
+  redirect("/dashboard/events/new?error=missing_starts_at");
+}
   if (!title) throw new Error("Titolo obbligatorio");
   if (!slug) throw new Error("Slug obbligatorio");
 
@@ -100,13 +105,14 @@ export async function createEventAction(formData: FormData) {
   const { error } = await supabase
     .from("events")
     .insert({
+      organization_id: organization.id,
       title,
       slug,
       description,
       location,
       location_maps_url,
-      starts_at,
-      ends_at,
+      starts_at: new Date(startsAtRaw).toISOString(),
+      ends_at: endsAtRaw ? new Date(endsAtRaw).toISOString() : null,
       poster_url,
       lineup_text,
       playlist_1_url,

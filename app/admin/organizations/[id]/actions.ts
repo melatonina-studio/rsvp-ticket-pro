@@ -99,3 +99,95 @@ export async function updateOrganizationAction(
 
   redirect(`/admin/organizations/${organizationId}?saved=1`);
 }
+
+async function findAuthUserByEmail(email: string) {
+  const serviceSupabase = createSupabaseServerClient();
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const { data, error } = await serviceSupabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (error) {
+    console.error("LIST AUTH USERS ERROR:", error);
+    return null;
+  }
+
+  return (
+    data.users.find((user) => user.email?.toLowerCase() === normalizedEmail) ??
+    null
+  );
+}
+
+export async function addOrganizationMemberAction(
+  organizationId: string,
+  formData: FormData
+) {
+  const { serviceSupabase } = await requireSuperAdmin();
+
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const role = String(formData.get("role") || "admin").trim();
+
+  if (!email) {
+    redirect(`/admin/organizations/${organizationId}?member_error=missing_email`);
+  }
+
+  const allowedRoles = ["owner", "admin", "scanner"];
+
+  if (!allowedRoles.includes(role)) {
+    redirect(`/admin/organizations/${organizationId}?member_error=invalid_role`);
+  }
+
+  const authUser = await findAuthUserByEmail(email);
+
+  if (!authUser) {
+    redirect(`/admin/organizations/${organizationId}?member_error=user_not_found`);
+  }
+
+  const { error } = await serviceSupabase
+    .from("organization_members")
+    .insert({
+      organization_id: organizationId,
+      user_id: authUser.id,
+      role,
+    });
+
+  if (error) {
+    if (error.code === "23505") {
+      redirect(`/admin/organizations/${organizationId}?member_error=already_member`);
+    }
+
+    console.error("ADD ORGANIZATION MEMBER ERROR:", error);
+    redirect(`/admin/organizations/${organizationId}?member_error=add_failed`);
+  }
+
+  redirect(`/admin/organizations/${organizationId}?member_saved=1`);
+}
+
+export async function removeOrganizationMemberAction(
+  organizationId: string,
+  formData: FormData
+) {
+  const { serviceSupabase } = await requireSuperAdmin();
+
+  const memberId = String(formData.get("member_id") || "").trim();
+
+  if (!memberId) {
+    redirect(`/admin/organizations/${organizationId}?member_error=missing_member`);
+  }
+
+  const { error } = await serviceSupabase
+    .from("organization_members")
+    .delete()
+    .eq("id", memberId)
+    .eq("organization_id", organizationId);
+
+  if (error) {
+    console.error("REMOVE ORGANIZATION MEMBER ERROR:", error);
+    redirect(`/admin/organizations/${organizationId}?member_error=remove_failed`);
+  }
+
+  redirect(`/admin/organizations/${organizationId}?member_removed=1`);
+}

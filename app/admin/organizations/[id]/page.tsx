@@ -4,13 +4,20 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseAuthServerClient } from "@/lib/supabase/auth-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { updateOrganizationAction } from "./actions";
+import {
+  updateOrganizationAction,
+  addOrganizationMemberAction,
+  removeOrganizationMemberAction,
+} from "./actions";
 
 type Props = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
     error?: string;
     saved?: string;
+    member_error?: string;
+    member_saved?: string;
+    member_removed?: string;
   }>;
 };
 
@@ -19,6 +26,18 @@ function errorMessage(error?: string) {
   if (error === "missing_slug") return "Slug non valido.";
   if (error === "slug_exists") return "Questo slug è già usato.";
   if (error === "update_failed") return "Errore durante il salvataggio.";
+  return "";
+}
+function memberErrorMessage(error?: string) {
+  if (error === "missing_email") return "Inserisci l’email dell’utente.";
+  if (error === "invalid_role") return "Ruolo non valido.";
+  if (error === "user_not_found")
+    return "Utente non trovato. Prima crealo in Supabase Authentication.";
+  if (error === "already_member")
+    return "Questo utente è già membro dell’organizzazione.";
+  if (error === "add_failed") return "Errore durante l’aggiunta del membro.";
+  if (error === "missing_member") return "Membro non valido.";
+  if (error === "remove_failed") return "Errore durante la rimozione.";
   return "";
 }
 
@@ -94,9 +113,10 @@ export default async function OrganizationDetailPage({
       .eq("organization_id", id),
 
     serviceSupabase
-      .from("organization_members")
-      .select("id,role,user_id")
-      .eq("organization_id", id),
+        .from("organization_members")
+        .select("id,role,user_id,created_at")
+        .eq("organization_id", id)
+        .order("created_at", { ascending: false }),
   ]);
 
   if (organizationError || !organization) {
@@ -107,6 +127,26 @@ export default async function OrganizationDetailPage({
   const publishedCount =
     events?.filter((event) => event.status === "published").length ?? 0;
   const memberCount = members?.length ?? 0;
+  const { data: authUsersData } = await serviceSupabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+    });
+
+    const authUsersById = new Map(
+    (authUsersData?.users ?? []).map((user) => [user.id, user])
+    );
+
+    const safeMembers = members ?? [];
+
+    const addMemberAction = addOrganizationMemberAction.bind(null, organization.id);
+    const removeMemberAction = removeOrganizationMemberAction.bind(
+    null,
+    organization.id
+    );
+
+    const memberMessage = memberErrorMessage(query.member_error);
+    const memberSaved = query.member_saved === "1";
+    const memberRemoved = query.member_removed === "1";
 
   const message = errorMessage(query.error);
   const saved = query.saved === "1";
@@ -166,7 +206,40 @@ export default async function OrganizationDetailPage({
             Organizzazione aggiornata correttamente.
           </div>
         ) : null}
+        {memberMessage ? (
+        <div className="rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
+            {memberMessage}
+        </div>
+        ) : null}
 
+        {memberSaved ? (
+        <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm text-emerald-200">
+            Membro aggiunto correttamente.
+        </div>
+        ) : null}
+
+        {memberRemoved ? (
+        <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">
+            Membro rimosso correttamente.
+        </div>
+        ) : null}
+        {memberMessage ? (
+          <div className="rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
+            {memberMessage}
+          </div>
+        ) : null}
+
+        {memberSaved ? (
+          <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm text-emerald-200">
+            Membro aggiunto correttamente.
+          </div>
+        ) : null}
+
+        {memberRemoved ? (
+          <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">
+            Membro rimosso correttamente.
+          </div>
+        ) : null}
         <section className="grid gap-4 md:grid-cols-3">
           {statCard("Eventi", eventCount)}
           {statCard("Pubblicati", publishedCount)}
@@ -362,14 +435,140 @@ export default async function OrganizationDetailPage({
         </form>
 
         <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-          <h2 className="text-xl font-bold">Accessi organizzazione</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Qui aggiungeremo gli utenti che possono gestire questa
-            organizzazione.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold">Accessi organizzazione</h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Collega utenti Supabase Auth a questa organizzazione.
+              </p>
+            </div>
 
-          <div className="mt-5 rounded-2xl border border-dashed border-white/15 p-6 text-sm text-neutral-500">
-            Prossimo step: aggiunta membri tramite email utente Supabase Auth.
+            <div className="rounded-full border border-white/10 bg-black px-3 py-1 text-sm text-neutral-400">
+              {safeMembers.length} membri
+            </div>
+          </div>
+
+          <form
+            action={addMemberAction}
+            className="mt-6 grid gap-4 rounded-2xl border border-white/10 bg-black p-4 md:grid-cols-[1fr_180px_auto]"
+          >
+            <div>
+              <label className="mb-2 block text-sm font-semibold">
+                Email utente
+              </label>
+              <input
+                name="email"
+                type="email"
+                required
+                className={fieldClass()}
+                placeholder="utente@email.com"
+              />
+              <p className="mt-2 text-xs text-neutral-500">
+                L’utente deve già esistere in Supabase Authentication.
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold">Ruolo</label>
+              <select name="role" defaultValue="admin" className={selectClass()}>
+                <option value="owner">Owner</option>
+                <option value="admin">Admin</option>
+                <option value="scanner">Scanner</option>
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="w-full rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-neutral-200"
+              >
+                Aggiungi
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-6">
+            {safeMembers.length ? (
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-black">
+                <table className="min-w-full text-sm">
+                  <thead className="border-b border-white/10 bg-white/[0.04]">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                        Utente
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                        Ruolo
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
+                        Aggiunto
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-neutral-500">
+                        Azioni
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {safeMembers.map((member: any) => {
+                      const authUser = authUsersById.get(member.user_id);
+
+                      return (
+                        <tr
+                          key={member.id}
+                          className="border-b border-white/10 align-top"
+                        >
+                          <td className="px-4 py-4">
+                            <div className="font-semibold text-white">
+                              {authUser?.email || "Utente non trovato"}
+                            </div>
+                            <div className="mt-1 font-mono text-xs text-neutral-600">
+                              {member.user_id}
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <span className="inline-flex rounded-full border border-violet-400/30 bg-violet-400/10 px-2.5 py-1 text-xs font-medium uppercase text-violet-200">
+                              {member.role}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-4 text-neutral-400">
+                            {member.created_at
+                              ? new Intl.DateTimeFormat("it-IT", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                }).format(new Date(member.created_at))
+                              : "—"}
+                          </td>
+
+                          <td className="px-4 py-4 text-right">
+                            <form action={removeMemberAction}>
+                              <input
+                                type="hidden"
+                                name="member_id"
+                                value={member.id}
+                              />
+
+                              <button
+                                type="submit"
+                                className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-400/20"
+                              >
+                                Rimuovi
+                              </button>
+                            </form>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/15 p-6 text-sm text-neutral-500">
+                Nessun membro collegato a questa organizzazione.
+              </div>
+            )}
           </div>
         </section>
       </div>

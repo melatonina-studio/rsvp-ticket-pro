@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import EventsTable from "@/components/dashboard/events/events-table";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ACTIVE_ORG_ID } from "@/lib/org";
+import { getActiveOrganization } from "@/lib/auth/get-active-organization";
 
 type SearchParams = Promise<{
   status?: string;
@@ -88,26 +88,20 @@ export default async function EventsDashboardPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const params = await searchParams;
-  const supabase = createSupabaseServerClient();
+const params = await searchParams;
+const supabase = createSupabaseServerClient();
 
-  const activeStatus = params.status ?? "all";
+const activeStatus = params.status ?? "all";
 
-  const [{ data: organization }, { data: events, error }] = await Promise.all([
-    supabase
-      .from("organization_settings")
-      .select("id, name, slug, logo_url, primary_color")
-      .eq("id", ACTIVE_ORG_ID)
-      .single(),
+const { organization, role, isSuperAdmin } = await getActiveOrganization();
 
-    supabase
-      .from("events")
-      .select(
-        "id,title,slug,location,starts_at,price_cents,capacity,status,access_mode,organization_id"
-      )
-      .eq("organization_id", ACTIVE_ORG_ID)
-      .order("starts_at", { ascending: false }),
-  ]);
+const { data: events, error } = await supabase
+  .from("events")
+  .select(
+    "id,title,slug,location,starts_at,price_cents,capacity,status,access_mode,organization_id"
+  )
+  .eq("organization_id", organization.id)
+  .order("starts_at", { ascending: false });
 
   if (error) {
     throw new Error(error.message);
@@ -151,11 +145,19 @@ export default async function EventsDashboardPage({
         </div>
 
         <div className="mt-2 text-2xl font-semibold">
-          {organization?.name ?? "Organizzazione non trovata"}
+        {organization.name ?? "Organizzazione non trovata"}
         </div>
 
-        <div className="mt-1 text-sm text-neutral-500">
-          @{organization?.slug ?? "slug-non-disponibile"}
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutral-500">
+          <span>@{organization.slug ?? "slug-non-disponibile"}</span>
+          <span>·</span>
+          <span>Ruolo: {role}</span>
+          {isSuperAdmin ? (
+            <>
+              <span>·</span>
+              <span className="text-amber-300">fallback super admin</span>
+            </>
+          ) : null}
         </div>
       </section>
 
