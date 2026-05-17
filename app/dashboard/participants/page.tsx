@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ACTIVE_ORG_ID } from "@/lib/org";
+import { getActiveOrganization } from "@/lib/auth/get-active-organization";
 
 type SearchParams = Promise<{
   q?: string;
@@ -360,17 +360,12 @@ export default async function ParticipantsDashboardPage({
   const activePayment = params.payment ?? "all";
   const activeEntry = params.entry ?? "all";
 
+  const { organization, role, isSuperAdmin } = await getActiveOrganization();
+
   const [
-    { data: organization },
     { data: tickets, error: ticketsError },
     { data: events, error: eventsError },
   ] = await Promise.all([
-    supabase
-      .from("organization_settings")
-      .select("id, name, slug")
-      .eq("id", ACTIVE_ORG_ID)
-      .single(),
-
     supabase
       .from("tickets")
       .select(
@@ -396,13 +391,13 @@ export default async function ParticipantsDashboardPage({
         )
       `
       )
-      .eq("organization_id", ACTIVE_ORG_ID)
+      .eq("organization_id", organization.id)
       .order("created_at", { ascending: false }),
 
     supabase
       .from("events")
       .select("id,title,slug,starts_at,organization_id")
-      .eq("organization_id", ACTIVE_ORG_ID)
+      .eq("organization_id", organization.id)
       .order("starts_at", { ascending: false }),
   ]);
 
@@ -466,11 +461,20 @@ export default async function ParticipantsDashboardPage({
         </div>
 
         <div className="mt-2 text-2xl font-semibold">
-          {organization?.name ?? "Organizzazione non trovata"}
+          {organization.name ?? "Organizzazione non trovata"}
         </div>
 
-        <div className="mt-1 text-sm text-neutral-500">
-          @{organization?.slug ?? "slug-non-disponibile"}
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutral-500">
+          <span>@{organization.slug ?? "slug-non-disponibile"}</span>
+          <span>·</span>
+          <span>Ruolo: {role}</span>
+
+          {isSuperAdmin ? (
+            <>
+              <span>·</span>
+              <span className="text-amber-300">fallback super admin</span>
+            </>
+          ) : null}
         </div>
       </section>
 
